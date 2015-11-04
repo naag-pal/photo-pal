@@ -1,0 +1,7 @@
+{
+  "host" : "http://52.32.3.195",
+   "S3AccessKey" : "AKIAIZF4KOPMCHHMBN6A", 
+   "S3SecretKey" : "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",
+   "S3Bucket" : "photopal",
+   "dbURL" : "mongodb://root:123456@ds027789.mongolab.com:27789/photopal"
+}

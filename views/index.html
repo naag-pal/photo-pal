@@ -1,0 +1,198 @@
+<!doctype html>
+<html lang="en">
+<head>
+	<meta charset="UTF-8">
+	<title>PhotoPal</title>
+	<link rel="stylesheet" href="../css/main.css">
+	<script src="http://code.jquery.com/jquery-1.11.0.min.js"></script>
+	<script src="/socket.io/socket.io.js"></script>
+	<script src="../js/photogrid_utils.js"></script>
+	<script>
+	$(function(){
+		var host = '{{host}}';
+
+		$(document).on('click', '#doUpload', function(){
+			uploadNow();
+		})
+
+
+		$(document).on('click', '.menu-item', function(){
+			var albumname = $(this).attr('data-album');  
+			$('.menu-item').removeClass('selected');
+			$(this).addClass('selected');
+			renderList(albumname);
+		})
+
+		
+
+		$(document).on('click', '#ShowUpload', function(){  
+			$('.controls').show();
+			$('.uploadlink').hide();
+		})
+
+		var socket = io(host);
+
+		socket.on('status', function(data){
+			showStatus(data.msg, data.delay);
+		})
+
+		socket.on('doUpdate', function(){
+			var album = $("#album").val();
+			renderList(album);
+		})
+
+		function renderList(album){
+			$('.gallery ul').html('');
+			ajax({
+				url: host + '/getimages/' + album,
+				success:function(data){
+					var imageList = JSON.parse(data.response);
+					for(var i = 0; i < imageList.length; i++){
+						var str = '<li>';
+						str += '<div class="overlay">';
+						str += '<div class="voteCtrl">';
+						str += '<a href="#" data-photoid="' + imageList[i]._id + '" class="voteUp">';
+						str += '<img src="../images/voteup.png" alt="Click Here to Vote Up !">';
+						str += '<h4>' + imageList[i].votes + '</h4>';
+						str += '</a>';
+						str += '</div>';
+						str += '</div>';
+						str += '<div class="imageHolder">';
+						str += '<img src="http://d1930a0b9sht89.cloudfront.net/' + imageList[i].filename + '" alt="">';
+						str += '</div>';
+						str += '</li>';
+
+						$('.gallery ul').append(str);
+					}
+				}
+			})
+		}
+
+		renderList('Animals');
+
+		function uploadNow(){
+			$('.progress').fadeIn(100);
+			var uploadURL = host + '/upload';
+			var uploadFile = $('.uploadPic');
+			var album = $("#album").val();
+			if(uploadFile.val()!=''){
+				var form = new FormData();
+				form.append("upload", uploadFile[0].files[0]);
+				form.append("album", album);
+				// Perform the AJAX POST request and send the file
+				ajax({
+					method:'post',
+					url: uploadURL,
+					success:function(){
+						$('.progress').fadeOut(200);
+						uploadFile.val('');
+					},
+					progress: function(e){
+						if(e.lengthComputable){
+							var perc = Math.round((e.loaded * 100) / e.total);
+							$('.progress').css('width', (perc + '%'));
+						}
+					},
+					payload:form
+				})
+			}
+		}
+
+		$(document).on('click', '.voteUp', function(e){
+			var that = $(this);
+			ajax({
+				url: host + '/voteup/' + that.data('photoid'),
+				success:function(data){
+					var parseData = JSON.parse(data.response);
+					that.find('h4').html(parseData.votes);
+				}
+			})
+		})
+
+	})
+	</script>
+
+</head>
+<body>
+	<div class="container">
+		<div class="topDeck">
+			<div class="logo">
+				<h1>PhotoPal</h1>
+			</div>
+			<div class="uploadlink"><a href="javascript:;" id="ShowUpload">Upload Images</a></div> 
+			<div class="controls" style="display:none;">
+			    <select id="album" class="album">
+				    <option value="Animals">Animals</option>
+				    <option value="Bikes">Bikes</option>
+				    <option value="Cars">Cars</option>
+				    <option value="Flowers">Flowers</option>
+				    <option value="Places">Places</option> 
+				    <option value="Cricket">Cricket</option>
+				    <option value="Socker">Socker</option>
+				    <option value="Movies">Movies</option> 
+				    <option value="General">General</option>
+			    </select>
+				<input type="file" name="uploadPic" class="uploadPic" multiple>
+				<button id="doUpload">Upload</button>
+				<div class="progressBarDiv">
+					<div class="progress"></div>
+				</div>
+				<h5 class="status"></h5>
+			</div>
+		</div>
+		<div class="menu"> 
+				    <a href="javascript:;" data-album="Animals" class="menu-item selected">Animals</a>
+				    <a href="javascript:;" data-album="Bikes" class="menu-item">Bikes</a>
+				    <a href="javascript:;" data-album="Cars" class="menu-item">Cars</a>
+				    <a href="javascript:;" data-album="Flowers" class="menu-item">Flowers</a>
+				    <a href="javascript:;" data-album="Places" class="menu-item">Places</a>
+				    <a href="javascript:;" data-album="Cricket" class="menu-item">Cricket</a>
+				    <a href="javascript:;" data-album="Socker" class="menu-item">Socker</a>
+				    <a href="javascript:;" data-album="Movies" class="menu-item">Movies</a> 
+				    <a href="javascript:;" data-album="General" class="menu-item">General</a> 
+		</div>
+		<div class="gallery">
+			<ul>
+				<!-- Repeat the following <li> structure for every image -->
+				<!-- <li>
+					<div class="overlay">
+					<div class="voteCtrl">
+						<a href="#" class="voteUp">
+							<img src="../images/voteup.png" alt="Click Here to Vote Up !">
+							<h4>100</h4>
+						</a>
+					</div>
+					</div>
+					<div class="imageHolder">
+						<img src="../images/someimage.jpg" alt="">
+					</div>
+				</li> -->
+				<!-- End Repeat -->
+
+
+			</ul>
+		</div>
+	<div class="footer"> 
+	    <div class="left">
+		 <h4>Node.js simple application for photo gallery</h4> 
+		 <div> &bull; This is created using Node.js, MongoDB, Jquery, Express modules <br />
+		  &bull;  Hosted Application on EC2 instance and images on S3 and Cloud Front  on Amazon Web Services  <br />
+		 &bull;  Hosted mongodb from mongolab.com <br />
+		 &bull;  <a href="http://nodejspal.com/photo-pal/" target="_blank">Blog about photopal application - PhotoPal</a> <br />
+		 &bull;  <a href="http://52.32.3.195/" target="_blank">Demo -  PhotoPal</a> </div>
+		</div>
+	    <div class="right">
+		 <h4>Download and play the code</h4> 
+		 <div> &bull;<b>autor</b> <a href="https://www.npmjs.com/~naag-pal" target="_blank">naag-pal</a>  <br />
+		  &bull; <b>npm module</b> <a href="https://www.npmjs.com/package/photo-pal" target="_blank">photo-pal</a> <br />
+		 &bull;  <b>github</b> <a href="https://github.com/naag-pal/photo-pal/" target="_blank">photo-pal</a>  <br />
+		 &bull;  <b>twitter</b>  <a href="https://github.com/pnagendra/" target="_blank">@pnagendra</a> 
+		</div>
+		</div>
+		<div class="footer-copy" style="padding-top:100px">
+		 &copy; photo-pal
+		</div>
+	</div>
+	</div>
+</body>
+</html>
